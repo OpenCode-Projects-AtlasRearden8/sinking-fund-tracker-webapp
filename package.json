@@ -1,0 +1,11 @@
+{
+  "name": "sinking-fund-tracker-webapp",
+  "version": "1.0.0",
+  "description": "Offline single-file web app for savings with a purpose: named buckets, targets, monthly contributions, deposit log with progress bars, month-by-month forecasts, catch-up suggestions, and CSV export. All data stays in your browser's localStorage.",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run-tests.js && node tests/smoke-tests.js"
+  },
+  "license": "MIT",
+  "author": "Asdale Dynamics, LLC"
+}

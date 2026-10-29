@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sinking Funds Tracker</title>
+<style>
+  :root {
+    --green: #2f9e44;
+    --green-light: #b2f2bb;
+    --green-bg: #ebfbee;
+    --ink: #1f2d24;
+    --muted: #5f6f66;
+    --card: #ffffff;
+    --bg: #f4f8f5;
+    --accent: #1c7ed6;
+    --danger: #c92a2a;
+    --border: #d7e3da;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--green), #74c0a2);
+    color: #fff;
+    padding: 1.5rem 1rem 1.2rem;
+    text-align: center;
+  }
+  header h1 { margin: 0; font-size: 1.6rem; letter-spacing: 0.5px; }
+  header p { margin: 0.35rem 0 0; opacity: 0.92; font-size: 0.95rem; }
+  main { max-width: 760px; margin: 0 auto; padding: 1rem 1rem 3rem; }
+  .summary {
+    background: var(--green-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.8rem 1rem;
+    margin: 1rem 0;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  .summary strong { color: var(--green); }
+  .summary .bar-wrap { margin-top: 0.5rem; }
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    margin: 1rem 0;
+  }
+  button {
+    font: inherit;
+    padding: 0.5rem 0.9rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  button:hover { background: var(--green-bg); }
+  button.primary { background: var(--green); border-color: var(--green); color: #fff; }
+  button.primary:hover { background: #2b8a3e; }
+  button.linkish { border: none; background: none; color: var(--accent); text-decoration: underline; padding: 0.15rem 0.3rem; }
+  button.linkish:hover { background: #e7f1fb; }
+  button.danger-text { border: none; background: none; color: var(--danger); text-decoration: underline; padding: 0.15rem 0.3rem; }
+  button.danger-text:hover { background: #fdecec; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.1rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(31, 45, 36, 0.07);
+  }
+  .card h2 {
+    margin: 0 0 0.4rem;
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .cheer { font-size: 0.9rem; color: var(--muted); font-style: italic; }
+  .bar-wrap {
+    background: #e6efe9;
+    border-radius: 999px;
+    height: 18px;
+    overflow: hidden;
+    margin: 0.5rem 0 0.35rem;
+  }
+  .bar {
+    height: 100%;
+    min-width: 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--green), #69db7c);
+    transition: width 0.4s ease;
+  }
+  .bar.done { background: linear-gradient(90deg, #f59f00, #ffd43b); animation: shine 2.2s ease-in-out infinite; }
+  @keyframes shine {
+    0%, 100% { filter: brightness(1); }
+    50% { filter: brightness(1.15); }
+  }
+  .meta { font-size: 0.9rem; color: var(--muted); margin: 0.2rem 0; }
+  .forecast-line { font-size: 0.95rem; margin: 0.4rem 0; }
+  .forecast-line.ontrack { color: var(--green); font-weight: 600; }
+  .forecast-line.catchup { color: #946000; }
+  details {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin: 0.5rem 0;
+    padding: 0.4rem 0.7rem;
+    background: #fcfefd;
+  }
+  details summary { cursor: pointer; font-size: 0.92rem; color: var(--accent); }
+  details summary:hover { text-decoration: underline; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin: 0.4rem 0; }
+  th, td { text-align: left; padding: 0.25rem 0.4rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; }
+  td.num, th.num { text-align: right; }
+  .deposit-row { display: flex; align-items: baseline; gap: 0.6rem; padding: 0.25rem 0; border-bottom: 1px dashed var(--border); font-size: 0.92rem; flex-wrap: wrap; }
+  .deposit-row:last-child { border-bottom: none; }
+  .deposit-row .note { color: var(--muted); }
+  .deposit-row .amt { font-weight: 700; color: var(--green); }
+  form { margin: 0.5rem 0; }
+  form .field { margin: 0.5rem 0; }
+  form label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 0.15rem; }
+  form input {
+    font: inherit;
+    padding: 0.45rem 0.6rem;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    width: 100%;
+    max-width: 320px;
+    background: #fff;
+    color: var(--ink);
+  }
+  form input:focus { outline: 2px solid var(--green-light); border-color: var(--green); }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; }
+  .form-grid .wide { grid-column: 1 / -1; }
+  .form-actions { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
+  .error { color: var(--danger); font-size: 0.88rem; margin-top: 0.3rem; }
+  #status {
+    min-height: 1.4rem;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--green);
+    margin: 0.3rem 0;
+  }
+  footer { text-align: center; color: var(--muted); font-size: 0.85rem; padding: 1rem; border-top: 1px solid var(--border); }
+  footer a { color: var(--accent); }
+  .empty-note { text-align: center; color: var(--muted); margin: 2rem 0; }
+  @media (max-width: 480px) {
+    .form-grid { grid-template-columns: 1fr; }
+    header h1 { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>Sinking Funds Tracker</h1>
+  <p>Savings with a purpose &mdash; put a little aside each month and watch each goal fill up.</p>
+</header>
+<main>
+  <div id="status" role="status" aria-live="polite"></div>
+  <div class="summary" id="summary" hidden></div>
+  <section id="bucketList" aria-label="Your savings buckets"></section>
+  <div class="empty-note" id="emptyNote" hidden>No buckets yet. Add your first one below &mdash; property tax, holidays, the car fund&hellip; anything you are saving for.</div>
+  <div class="toolbar">
+    <button type="button" class="primary" id="addBucketBtn">+ Add a bucket</button>
+    <button type="button" id="exportBtn">Download CSV of deposits</button>
+  </div>
+  <div class="card" id="bucketFormCard" hidden>
+    <h2 id="bucketFormTitle">Add a bucket</h2>
+    <form id="bucketForm">
+      <div class="form-grid">
+        <div class="field wide">
+          <label for="bf-name">Bucket name</label>
+          <input id="bf-name" name="name" type="text" maxlength="60" required placeholder="e.g. Property tax">
+        </div>
+        <div class="field">
+          <label for="bf-target">Goal amount ($)</label>
+          <input id="bf-target" name="target" type="number" min="0.01" step="0.01" required placeholder="e.g. 1200">
+        </div>
+        <div class="field">
+          <label for="bf-monthly">Monthly contribution ($)</label>
+          <input id="bf-monthly" name="monthly" type="number" min="0" step="0.01" required placeholder="e.g. 100">
+        </div>
+        <div class="field wide">
+          <label for="bf-goal">Goal date</label>
+          <input id="bf-goal" name="goalDate" type="date" required>
+        </div>
+      </div>
+      <div class="error" id="bucketFormError" hidden></div>
+      <div class="form-actions">
+        <button type="submit" class="primary" id="bucketFormSave">Save bucket</button>
+        <button type="button" id="bucketFormCancel">Cancel</button>
+      </div>
+    </form>
+  </div>
+</main>
+<footer>
+  Offline and local-first: everything lives in your browser&rsquo;s storage &mdash; nothing is sent anywhere.
+  <br>A friendly tool by <a href="https://dylanasdale.github.io" rel="noopener">Asdale Dynamics, LLC</a> &middot; MIT License &middot; Companions well with the envelope-budget web app.
+</footer>
+<script>
+(function () {
+  "use strict";
+
+  var STORAGE_KEY = "sinkingFundsTracker.v1";
+  var MAX_BUCKETS = 100;
+  var MAX_DEPOSITS_PER_BUCKET = 2000;
+  var MAX_MONEY = 1000000000;
+
+  var SFTAPI = {
+    round2: round2,
+    fmtMoney: fmtMoney,
+    parseISODate: parseISODate,
+    futureISO: futureISO,
+    todayISO: todayISO,
+    monthKeyOf: monthKeyOf,
+    monthLabelOfKey: monthLabelOfKey,
+    monthsRemaining: monthsRemaining,
+    forecastTable: forecastTable,
+    projectedTotal: projectedTotal,
+    firstGoalMonth: firstGoalMonth,
+    catchUpSuggestion: catchUpSuggestion,
+    csvEscape: csvEscape,
+    buildDepositCSV: buildDepositCSV,
+    cheerFor: cheerFor,
+    validateBucketInput: validateBucketInput,
+    validateDepositInput: validateDepositInput,
+    sanitizeState: sanitizeState,
+    defaultBuckets: defaultBuckets,
+    bucketTotal: bucketTotal
+  };
+
+  function round2(n) {
+    var x = Number(n);
+    if (!isFinite(x)) return 0;
+    return Math.round((x + Number.EPSILON) * 100) / 100;
+  }
+
+  function fmtMoney(n) {
+    return "$" + Number(round2(n)).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function parseISODate(s) {
+    if (typeof s !== "string") return null;
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s.trim());
+    if (!m) return null;
+    var y = Number(m[1]);
+    var mo = Number(m[2]);
+    var d = Number(m[3]);
+    if (mo < 1 || mo > 12) return null;
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+    return dt;
+  }
+
+  function todayISO(now) {
+    var d = now || (typeof Date !== "undefined" ? new Date() : null);
+    if (!d) return null;
+    return d.getFullYear() + "-" + pad2(d.getMonth() + 1) + "-" + pad2(d.getDate());
+  }
+
+  function pad2(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function futureISO(monthsAhead, day, now) {
+    var d = now || new Date();
+    var y = d.getFullYear();
+    var mo = d.getMonth() + 1 + Number(monthsAhead);
+    y = y + Math.floor((mo - 1) / 12);
+    mo = ((mo - 1) % 12) + 1;
+    var last = new Date(y, mo, 0).getDate();
+    var dd = Math.min(Number(day), last);
+    return y + "-" + pad2(mo) + "-" + pad2(dd);
+  }
+
+  function monthKeyOf(d) {
+    return d.getFullYear() * 12 + d.getMonth();
+  }
+
+  function monthLabelOfKey(k) {
+    var y = Math.floor(k / 12);
+    var mo = k % 12 + 1;
+    return y + "-" + pad2(mo);
+  }
+
+  function monthsRemaining(now, goalDate) {
+    var goal = goalDate instanceof Date ? goalDate : parseISODate(goalDate);
+    if (!goal) return 0;
+    return Math.max(0, monthKeyOf(goal) - monthKeyOf(now));
+  }
+
+  function forecastTable(saved, monthly, goalDateISO, now) {
+    var goal = parseISODate(goalDateISO);
+    if (!goal) return [];
+    var startKey = monthKeyOf(now) + 1;
+    var endKey = monthKeyOf(goal);
+    var rows = [];
+    var bal = round2(saved);
+    var k;
+    for (k = startKey; k <= endKey; k++) {
+      bal = round2(bal + monthly);
+      rows.push({ month: monthLabelOfKey(k), balance: bal });
+    }
+    return rows;
+  }
+
+  function projectedTotal(saved, monthly, now, goalDateISO) {
+    var goal = parseISODate(goalDateISO);
+    if (!goal) return round2(saved);
+    return round2(saved + monthly * monthsRemaining(now, goal));
+  }
+
+  function firstGoalMonth(saved, monthly, target, goalDateISO, now) {
+    if (round2(saved) >= round2(target)) return null;
+    var rows = forecastTable(saved, monthly, goalDateISO, now);
+    var i;
+    for (i = 0; i < rows.length; i++) {
+      if (rows[i].balance >= round2(target)) return rows[i].month;
+    }
+    return null;
+  }
+
+  function catchUpSuggestion(b, now) {
+    var goal = parseISODate(b.goalDate);
+    if (!goal) return null;
+    var saved = round2(b.saved);
+    var target = round2(b.target);
+    var gap = round2(target - saved);
+    if (gap <= 0) return null;
+    var mr = monthsRemaining(now, goal);
+    if (mr <= 0) {
+      return {
+        monthsRemaining: 0,
+        neededPerMonth: null,
+        extraPerMonth: null,
+        needNow: gap,
+        message: "Your goal date has passed and " + fmtMoney(gap) + " is still missing. A one-time deposit or a new goal date would close the gap."
+      };
+    }
+    var neededPerMonth = round2(Math.ceil((gap / mr) * 100) / 100);
+    var extra = round2(Math.max(0, neededPerMonth - round2(b.monthly)));
+    if (extra <= 0) return null;
+    return {
+      monthsRemaining: mr,
+      neededPerMonth: neededPerMonth,
+      extraPerMonth: extra,
+      needNow: 0,
+      message: "You are close \u2014 saving about " + fmtMoney(extra) + " more each month would get you to " + fmtMoney(target) + " by " + monthLabelOfKey(monthKeyOf(goal)) + "."
+    };
+  }
+
+  function cheerFor(pct) {
+    if (pct >= 100) return "Goal reached \u2014 nicely done!";
+    if (pct >= 90) return "So close now \u2014 almost there!";
+    if (pct >= 75) return "Three quarters of the way \u2014 keep it rolling!";
+    if (pct >= 50) return "Past halfway \u2014 steady wins the race.";
+    if (pct >= 25) return "Off to a good start \u2014 every deposit counts.";
+    if (pct > 0) return "Just getting started \u2014 a little each month adds up.";
+    return "Ready when you are \u2014 the first deposit is the best feeling.";
+  }
+
+  function csvEscape(v) {
+    var s = String(v === null || v === undefined ? "" : v);
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+
+  function buildDepositCSV(buckets) {
+    var rows = [];
+    var b, i;
+    for (i = 0; i < buckets.length; i++) {
+      b = buckets[i];
+      for (var j = 0; j < b.deposits.length; j++) {
+        rows.push({ name: b.name, date: b.deposits[j].date, amount: b.deposits[j].amount, note: b.deposits[j].note });
+      }
+    }
+    rows.sort(function (a, z) {
+      if (a.date !== z.date) return a.date < z.date ? -1 : 1;
+      return a.name < z.name ? -1 : a.name > z.name ? 1 : 0;
+    });
+    var lines = ["Bucket,Date,Amount,Note"];
+    for (i = 0; i < rows.length; i++) {
+      lines.push([
+        csvEscape(rows[i].name),
+        csvEscape(rows[i].date),
+        csvEscape(round2(rows[i].amount).toFixed(2)),
+        csvEscape(rows[i].note)
+      ].join(","));
+    }
+    return lines.join("\r\n") + "\r\n";
+  }
+
+  function id(prefix) {
+    return prefix + "-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+  }
+
+  function bucketTotal(b) {
+    var sum = 0;
+    for (var i = 0; i < b.deposits.length; i++) sum += Number(b.deposits[i].amount) || 0;
+    return round2(sum);
+  }
+
+  function cleanMoney(v, fallback) {
+    var n = Number(v);
+    if (!isFinite(n)) return fallback;
+    n = round2(Math.max(0, Math.min(n, MAX_MONEY)));
+    return n;
+  }
+
+  function cleanText(v, max) {
+    if (typeof v !== "string") return "";
+    return v.replace(/\s+/g, " ").trim().slice(0, max);
+  }
+
+  function validateBucketInput(values) {
+    var name = cleanText(values.name, 60);
+    if (!name) return { error: "Give the bucket a name you will recognize." };
+    var target = cleanMoney(values.target, NaN);
+    if (!(target > 0)) return { error: "The goal amount needs to be more than $0." };
+    var monthly = cleanMoney(values.monthly, 0);
+    var goalDate = typeof values.goalDate === "string" ? values.goalDate.trim() : "";
+    if (!parseISODate(goalDate)) return { error: "Pick a valid goal date (like 2027-12-31)." };
+    return {
+      value: { name: name, target: target, monthly: monthly, goalDate: goalDate }
+    };
+  }
+
+  function validateDepositInput(values) {
+    var amount = cleanMoney(values.amount, NaN);
+    if (!(amount > 0)) return { error: "Deposit amount needs to be more than $0." };
+    var date = typeof values.date === "string" ? values.date.trim() : "";
+    if (!parseISODate(date)) return { error: "Pick a valid deposit date." };
+    var note = cleanText(values.note, 120);
+    return { value: { amount: amount, date: date, note: note } };
+  }
+
+  function sanitizeBucket(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    var name = cleanText(raw.name, 60);
+    if (!name) return null;
+    var goalDate = typeof raw.goalDate === "string" && parseISODate(raw.goalDate.trim()) ? raw.goalDate.trim() : futureISO(18, 1);
+    var deposits = [];
+    if (Array.isArray(raw.deposits)) {
+      for (var i = 0; i < raw.deposits.length && deposits.length < MAX_DEPOSITS_PER_BUCKET; i++) {
+        var d = raw.deposits[i];
+        if (!d || typeof d !== "object") continue;
+        var amount = cleanMoney(d.amount, NaN);
+        if (!(amount > 0)) continue;
+        var date = typeof d.date === "string" && parseISODate(d.date.trim()) ? d.date.trim() : null;
+        if (!date) continue;
+        deposits.push({ id: typeof d.id === "string" ? d.id : id("d"), amount: amount, date: date, note: cleanText(d.note, 120) });
+      }
+    }
+    return {
+      id: typeof raw.id === "string" ? raw.id : id("b"),
+      name: name,
+      target: cleanMoney(raw.target, 0) > 0 ? cleanMoney(raw.target, 0) : 100,
+      monthly: cleanMoney(raw.monthly, 0),
+      goalDate: goalDate,
+      deposits: deposits
+    };
+  }
+
+  function sanitizeState(raw) {
+    var buckets = [];
+    if (raw && typeof raw === "object" && Array.isArray(raw.buckets)) {
+      for (var i = 0; i < raw.buckets.length && buckets.length < MAX_BUCKETS; i++) {
+        var b = sanitizeBucket(raw.buckets[i]);
+        if (b) buckets.push(b);
+      }
+    }
+    return { buckets: buckets };
+  }
+
+  function defaultBuckets(now) {
+    var d = now || new Date();
+    function june30Next() {
+      var y = d.getMonth() + 1 >= 7 ? d.getFullYear() + 1 : d.getFullYear();
+      return y + "-06-30";
+    }
+    return [
+      { id: id("b"), name: "Property tax", target: 2400, monthly: 200, goalDate: june30Next(), deposits: [] },
+      { id: id("b"), name: "Car fund", target: 5000, monthly: 150, goalDate: futureISO(24, 31, d), deposits: [] },
+      { id: id("b"), name: "Holidays", target: 800, monthly: 65, goalDate: futureISO(13, 15, d), deposits: [] },
+      { id: id("b"), name: "Vet visits", target: 600, monthly: 50, goalDate: futureISO(12, 1, d), deposits: [] }
+    ];
+  }
+
+  function projectInfo(b, now) {
+    var goal = parseISODate(b.goalDate);
+    var saved = bucketTotal(b);
+    var mr = goal ? monthsRemaining(now, goal) : 0;
+    var projected = round2(saved + round2(b.monthly) * mr);
+    var already = round2(saved) >= round2(b.target);
+    var reachLabel = null;
+    if (!already && projected >= round2(b.target) && goal) {
+      reachLabel = firstGoalMonth(saved, round2(b.monthly), b.target, b.goalDate, now);
+    }
+    return { saved: saved, monthsRemaining: mr, projected: projected, already: already, reached: !already && reachLabel !== null, reachLabel: reachLabel };
+  }
+
+  if (typeof module !== "undefined" && module.exports !== undefined) {
+    module.exports = SFTAPI;
+  }
+  if (typeof window !== "undefined") {
+    window.SFT = SFTAPI;
+  }
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  var state = { buckets: [] };
+  var openBucketForm = null;
+  var openDepositForm = null;
+
+  function el(idName) { return document.getElementById(idName); }
+
+  function esc(s) {
+    return String(s === null || s === undefined ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw === null) {
+        var seeded = { buckets: defaultBuckets() };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+      return sanitizeState(JSON.parse(raw));
+    } catch (err) {
+      return { buckets: defaultBuckets() };
+    }
+  }
+
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (err) {
+      setStatus("Could not save your data in this browser. Changes may be lost on refresh.");
+    }
+  }
+
+  function setStatus(msg) {
+    var s = el("status");
+    s.textContent = msg;
+  }
+
+  function flash(msg) {
+    setStatus(msg);
+    window.clearTimeout(flash._t);
+    flash._t = window.setTimeout(function () { setStatus(""); }, 4000);
+  }
+
+  function progressPct(saved, target) {
+    if (!(target > 0)) return 0;
+    return Math.max(0, Math.min(100, Math.round((saved / target) * 100)));
+  }
+
+  function barClass(pct) { return pct >= 100 ? "bar done" : "bar"; }
+
+  function openDetailsKeys() {
+    var keys = [];
+    var nodes = el("bucketList").querySelectorAll("details[data-key]");
+    for (var i = 0; i < nodes.length; i++) {
+      if (nodes[i].open) keys.push(nodes[i].getAttribute("data-key"));
+    }
+    return keys;
+  }
+
+  function depositRows(b) {
+    var out = "";
+    var sorted = b.deposits.slice().sort(function (a, z) { return z.date < a.date ? -1 : z.date > a.date ? 1 : 0; });
+    if (!sorted.length) {
+      return '<p class="meta">No deposits yet. The first one is the sweetest.</p>';
+    }
+    for (var i = 0; i < sorted.length; i++) {
+      var d = sorted[i];
+      out += '<div class="deposit-row">'
+        + '<span class="amt">' + esc(fmtMoney(d.amount)) + "</span>"
+        + "<span>" + esc(d.date) + "</span>"
+        + (d.note ? '<span class="note">&mdash; ' + esc(d.note) + "</span>" : "")
+        + '<span class="grow"></span>'
+        + '<button type="button" class="danger-text" data-action="deposit-delete" data-bucket="' + esc(b.id) + '" data-deposit="' + esc(d.id) + '">remove</button>'
+        + "</div>";
+    }
+    return out;
+  }
+
+  function forecastText(b, now) {
+    var info = projectInfo(b, now);
+    if (info.already) return { cls: "ontrack", text: "Goal reached \u2014 nicely done! You have " + esc(fmtMoney(info.saved)) + " of " + esc(fmtMoney(b.target)) + "." };
+    if (!info.monthsRemaining && info.saved < b.target) {
+      var sug = catchUpSuggestion(b, now);
+      return { cls: "catchup", text: sug ? sug.message : "There are no months left before your goal date \u2014 consider a one-time deposit or a new date." };
+    }
+    if (info.reached) {
+      return { cls: "ontrack", text: "On track \u2014 you should reach " + esc(fmtMoney(b.target)) + " by " + esc(info.reachLabel) + " (projected: " + esc(fmtMoney(info.projected)) + ")." };
+    }
+    var cu = catchUpSuggestion(b, now);
+    if (cu && cu.extraPerMonth > 0) return { cls: "catchup", text: cu.message };
+    return { cls: "catchup", text: "At " + esc(fmtMoney(b.monthly)) + " per month you would have " + esc(fmtMoney(info.projected)) + " by " + esc(b.goalDate) + ". A bit more per month or a later date would close the gap." };
+  }
+
+  function bucketCardHtml(b, now, detailsOpen) {
+    var saved = bucketTotal(b);
+    var pct = progressPct(saved, b.target);
+    var f = forecastText(b, now);
+    var remaining = round2(Math.max(0, b.target - saved));
+    var html = '<article class="card" data-bucket-card="' + esc(b.id) + '">'
+      + "<h2>" + esc(b.name);
+    if (pct >= 100) html += '<span class="cheer">&#127881; complete</span>';
+    html += "</h2>"
+      + '<p class="cheer">' + esc(cheerFor(pct)) + "</p>"
+      + '<div class="bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + pct + '" aria-label="' + esc(b.name) + ' progress">'
+      + '<div class="' + barClass(pct) + '" style="width:' + pct + '%"></div></div>'
+      + '<p class="meta"><strong>' + esc(fmtMoney(saved)) + "</strong> of <strong>" + esc(fmtMoney(b.target)) + "</strong> saved (" + pct + "%)"
+      + (remaining > 0 && pct < 100 ? " &middot; " + esc(fmtMoney(remaining)) + " to go" : "") + "</p>"
+      + '<p class="meta">Plan: ' + esc(fmtMoney(b.monthly)) + " / month &middot; Goal date: " + esc(b.goalDate) + "</p>"
+      + '<p class="forecast-line ' + f.cls + '">' + f.text + "</p>"
+      + '<div class="toolbar">'
+      + '<button type="button" class="primary" data-action="deposit-toggle" data-bucket="' + esc(b.id) + '">+ Add deposit</button>'
+      + '<button type="button" data-action="edit" data-bucket="' + esc(b.id) + '">Edit</button>'
+      + '<button type="button" class="danger-text" data-action="bucket-delete" data-bucket="' + esc(b.id) + '">Delete</button>'
+      + "</div>";
+    if (openDepositForm === b.id) {
+      html += '<form data-deposit-form="' + esc(b.id) + '">'
+        + '<div class="form-grid">'
+        + '<div class="field"><label>Deposit amount ($)</label><input name="amount" type="number" min="0.01" step="0.01" value="' + esc(b.monthly > 0 ? b.monthly : "") + '" required></div>'
+        + '<div class="field"><label>Date</label><input name="date" type="date" value="' + esc(todayISO()) + '" required></div>'
+        + '<div class="field wide"><label>Note (optional)</label><input name="note" type="text" maxlength="120" placeholder="e.g. payday, side gig, spare change jar"></div>'
+        + "</div>"
+        + '<div class="error" data-deposit-error hidden></div>'
+        + '<div class="form-actions"><button type="submit" class="primary">Add deposit</button>'
+        + '<button type="button" data-action="deposit-toggle" data-bucket="' + esc(b.id) + '">Cancel</button></div>'
+        + "</form>";
+    }
+    html += '<details data-key="' + esc(b.id) + ':history"' + (detailsOpen.indexOf(b.id + ":history") !== -1 ? " open" : "") + ">"
+      + "<summary>Deposit history (" + b.deposits.length + ")</summary>"
+      + depositRows(b)
+      + "</details>";
+    var table = forecastTable(saved, round2(b.monthly), b.goalDate, now);
+    html += '<details data-key="' + esc(b.id) + ':forecast"' + (detailsOpen.indexOf(b.id + ":forecast") !== -1 ? " open" : "") + ">"
+      + "<summary>Month-by-month forecast</summary>";
+    if (table.length) {
+      html += '<table><thead><tr><th scope="col">Month</th><th scope="col" class="num">Projected balance</th></tr></thead><tbody>';
+      for (var i = 0; i < table.length; i++) {
+        html += "<tr><td>" + esc(table[i].month) + '</td><td class="num">' + esc(fmtMoney(table[i].balance)) + "</td></tr>";
+      }
+      html += "</tbody></table>";
+    } else {
+      html += '<p class="meta">No months remain before this goal date, so there is nothing to forecast. A new goal date will bring the table back.</p>';
+    }
+    html += "</details></article>";
+    return html;
+  }
+
+  function render() {
+    var now = new Date();
+    var openKeys = openDetailsKeys();
+    var list = el("bucketList");
+    var html = "";
+    var totalSaved = 0;
+    var totalTarget = 0;
+    var i, b;
+    for (i = 0; i < state.buckets.length; i++) {
+      b = state.buckets[i];
+      totalSaved += bucketTotal(b);
+      totalTarget += Number(b.target) || 0;
+    }
+    totalSaved = round2(totalSaved);
+    totalTarget = round2(totalTarget);
+    var summary = el("summary");
+    if (state.buckets.length) {
+      var totalPct = progressPct(totalSaved, totalTarget);
+      summary.hidden = false;
+      summary.innerHTML = "Across " + state.buckets.length + (state.buckets.length === 1 ? " bucket" : " buckets")
+        + ": <strong>" + esc(fmtMoney(totalSaved)) + "</strong> saved of <strong>" + esc(fmtMoney(totalTarget)) + "</strong> (" + totalPct + "%)"
+        + '<div class="bar-wrap"><div class="' + barClass(totalPct) + '" style="width:' + totalPct + '%"></div></div>';
+      for (i = 0; i < state.buckets.length; i++) {
+        html += bucketCardHtml(state.buckets[i], now, openKeys);
+      }
+    } else {
+      summary.hidden = true;
+      el("emptyNote").hidden = false;
+    }
+    list.innerHTML = html;
+  }
+
+  function findBucket(bucketId) {
+    for (var i = 0; i < state.buckets.length; i++) {
+      if (state.buckets[i].id === bucketId) return state.buckets[i];
+    }
+    return null;
+  }
+
+  function showBucketForm(editId) {
+    var card = el("bucketFormCard");
+    var form = el("bucketForm");
+    openBucketForm = editId || "new";
+    card.hidden = false;
+    if (editId) {
+      var b = findBucket(editId);
+      if (!b) { hideBucketForm(); return; }
+      el("bucketFormTitle").textContent = "Edit bucket";
+      el("bf-name").value = b.name;
+      el("bf-target").value = b.target;
+      el("bf-monthly").value = b.monthly;
+      el("bf-goal").value = b.goalDate;
+    } else {
+      el("bucketFormTitle").textContent = "Add a bucket";
+      form.reset();
+      el("bf-monthly").value = "";
+      el("bf-goal").value = futureISO(12, 1);
+    }
+    el("bucketFormError").hidden = true;
+    el("bf-name").focus();
+  }
+
+  function hideBucketForm() {
+    openBucketForm = null;
+    el("bucketFormCard").hidden = true;
+    el("bucketFormError").hidden = true;
+  }
+
+  function exportCSV() {
+    if (!state.buckets.length) {
+      flash("There are no buckets or deposits to export yet.");
+      return;
+    }
+    var csv = buildDepositCSV(state.buckets);
+    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "sinking-funds-deposits-" + todayISO() + ".csv";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    flash("CSV downloaded \u2014 open it in any spreadsheet app.");
+  }
+
+  el("addBucketBtn").addEventListener("click", function () {
+    if (openBucketForm) { hideBucketForm(); return; }
+    showBucketForm(null);
+  });
+  el("bucketFormCancel").addEventListener("click", hideBucketForm);
+  el("bucketForm").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var data = new FormData(e.target);
+    var check = validateBucketInput({
+      name: data.get("name"),
+      target: data.get("target"),
+      monthly: data.get("monthly"),
+      goalDate: data.get("goalDate")
+    });
+    if (check.error) {
+      el("bucketFormError").textContent = check.error;
+      el("bucketFormError").hidden = false;
+      return;
+    }
+    var v = check.value;
+    if (openBucketForm && openBucketForm !== "new") {
+      var b = findBucket(openBucketForm);
+      if (b) {
+        b.name = v.name;
+        b.target = v.target;
+        b.monthly = v.monthly;
+        b.goalDate = v.goalDate;
+        saveState();
+        flash("Bucket updated \u2014 the forecast is refreshed.");
+      }
+    } else {
+      state.buckets.push({
+        id: id("b"), name: v.name, target: v.target, monthly: v.monthly, goalDate: v.goalDate, deposits: []
+      });
+      saveState();
+      flash("Bucket added \u2014 future you says thanks.");
+    }
+    hideBucketForm();
+    render();
+  });
+
+  el("exportBtn").addEventListener("click", exportCSV);
+
+  el("bucketList").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    var bucketId = btn.getAttribute("data-bucket");
+    var action = btn.getAttribute("data-action");
+    var b = findBucket(bucketId);
+    if (!b) return;
+    if (action === "edit") {
+      showBucketForm(bucketId);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } else if (action === "deposit-toggle") {
+      openDepositForm = openDepositForm === bucketId ? null : bucketId;
+      render();
+    } else if (action === "bucket-delete") {
+      if (window.confirm("Delete the \"" + b.name + "\" bucket and all of its deposits? This cannot be undone.")) {
+        state.buckets = state.buckets.filter(function (x) { return x.id !== bucketId; });
+        saveState();
+        render();
+        flash("Bucket deleted.");
+      }
+    } else if (action === "deposit-delete") {
+      var depId = btn.getAttribute("data-deposit");
+      b.deposits = b.deposits.filter(function (x) { return x.id !== depId; });
+      saveState();
+      render();
+      flash("Deposit removed.");
+    }
+  });
+
+  el("bucketList").addEventListener("submit", function (e) {
+    var form = e.target.closest("form[data-deposit-form]");
+    if (!form) return;
+    e.preventDefault();
+    var b = findBucket(form.getAttribute("data-deposit-form"));
+    if (!b) return;
+    var data = new FormData(form);
+    var check = validateDepositInput({ amount: data.get("amount"), date: data.get("date"), note: data.get("note") });
+    var errEl = form.querySelector("[data-deposit-error]");
+    if (check.error) {
+      errEl.textContent = check.error;
+      errEl.hidden = false;
+      return;
+    }
+    check.value.id = id("d");
+    b.deposits.push(check.value);
+    saveState();
+    openDepositForm = null;
+    render();
+    flash("Deposit added to " + b.name + " \u2014 the bar is cheering you on.");
+  });
+
+  state = loadState();
+  render();
+})();
+</script>
+</body>
+</html>
